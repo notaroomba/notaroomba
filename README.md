@@ -6,7 +6,7 @@
   
 - 🎹 I'm an avid musician
   
-- 🌱 I'm currently learning **Rust**
+- 🌱 I'm currently learning **KiCad**
 <img align="left" height="180" src="https://github-readme-stats-notaroomba.vercel.app/api/top-langs/?username=notaroomba&layout=compact&theme=github_dark_dimmed&langs_count=10&hide=c"> 
 <img align="center" height="180" src="https://github-readme-stats-notaroomba.vercel.app/api?username=notaroomba&show_icons=true&theme=github_dark_dimmed">
 
