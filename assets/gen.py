@@ -46,7 +46,9 @@ PALETTES = {
 SMOKE = "#f2f4f3"
 BG = "#000000"
 EDGE = "#2d2a26"  # neutral card border
-FPS = 5  # every animation updates this many times a second, all on the same beats, so the image repaints rarely
+FPS = 1  # every animation updates this many times a second, all on the same beats, so the image repaints rarely
+LOOP = 0  # for pre-rendered frames: every animation then repeats a whole number of times in LOOP seconds, so frames loop seamlessly
+DETAIL = False  # for pre-rendered frames: they cost nothing to play, so the black hole gets every particle
 MONO = "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace"
 
 # Blender Pro Bold for all readable text; the ASCII scenes stay monospace so columns line up.
@@ -186,17 +188,24 @@ def scene_waves(width, rows, y0, prefix="w", shift=0.0):
 def scene_stars(width, height, prefix="s", seed=3, density=1.0):
     """Three parallax layers drifting left, twinkling bright stars, and a shooting star."""
     rnd = random.Random(seed)
-    cols, rows = round(width / CHAR_W), int(height / LINE_H) + 1
+    rows = int(height / LINE_H) + 1
+    # a layer drifts one tile per period. Normally the tile is the full width; for a short
+    # seamless loop it is a third of it, so the layers keep their slow, distinct speeds
+    tile_w = width / round(width / 300) if LOOP else width
+    cols = round(tile_w / CHAR_W)
     css, out = [], []
     for li, (chars, palette, prob, dur) in enumerate([
         (".", STAR_DIM, 0.05, 90), ("..+", STAR[1:7], 0.022, 55), ("+*", STAR, 0.008, 32),
     ]):
+        if LOOP:
+            dur = LOOP / (li + 1)
         grid = [[(rnd.choice(chars), rnd.choice(palette)) if rnd.random() < prob * density else (" ", None)
                  for _ in range(cols)] for _ in range(rows)]
-        tile = grid_to_svg(grid, 0, width)
-        css.append(f"@keyframes {prefix}d{li}{{from{{transform:translateX(0)}}to{{transform:translateX(-{width}px)}}}}"
-                   f".{prefix}l{li}{{animation:{prefix}d{li} {dur}s linear infinite}}")
-        out.append(f'<g class="{prefix}l{li}"><g>{tile}</g><g transform="translate({width} 0)">{tile}</g></g>')
+        tile = grid_to_svg(grid, 0, tile_w)
+        css.append(f"@keyframes {prefix}d{li}{{from{{transform:translateX(0)}}to{{transform:translateX(-{tile_w:g}px)}}}}"
+                   f".{prefix}l{li}{{animation:{prefix}d{li} {dur:g}s linear infinite}}")
+        copies = "".join(f'<g transform="translate({j * tile_w:g} 0)">{tile}</g>' for j in range(round(width / tile_w) + 1))
+        out.append(f'<g class="{prefix}l{li}">{copies}</g>')
     css.append(f"@keyframes {prefix}tw{{0%,100%{{opacity:.15}}50%{{opacity:1}}}}")
     for _ in range(int(14 * density * width / 900) + 4):
         x, y = rnd.uniform(10, width - 10), rnd.uniform(10, height - 4)
@@ -324,7 +333,7 @@ def scene_blackhole(width, rows, y0):
                 f'animation:orb {period:.2f}s {d:.2f}s linear infinite">{ch}</text>')
 
     disk = []
-    n_disk = 120 if small else 240
+    n_disk = (550 if small else 1100) if DETAIL else (120 if small else 240)
     r_in, r_out = 1.6 * rs, (5.6 if small else 8.5) * rs
     for _ in range(n_disk):
         # more particles near the hot inner edge
@@ -337,7 +346,7 @@ def scene_blackhole(width, rows, y0):
         disk.append(particle(ellipse(r, r * tilt + rnd.uniform(-2.5, 2.5)), period, ch, HOT[idx], 10 + 3 * heat, 0.55 + 0.45 * rnd.random()))
 
     halo = []
-    for _ in range(28 if small else 50):
+    for _ in range((90 if small else 170) if DETAIL else (28 if small else 50)):
         r = rs * rnd.uniform(1.22, 1.5)
         idx = rnd.randint(5, len(HOT) - 1)
         halo.append(particle(ellipse(r, r * rnd.uniform(0.92, 1.0)), rnd.uniform(7, 10), rnd.choice("*+.:o"), HOT[idx], 10, 0.7 + 0.3 * rnd.random()))
@@ -409,9 +418,20 @@ def subtitle(cfg, y, palette="classic"):
 ANIM = re.compile(r"animation:([\w-]+) ([\d.]+)s(?: (-?[\d.]+)s)? ([\w-]+(?:\([^)]*\))?) infinite")
 
 
-def quantize(svg, fps=FPS):
+def quantize(svg, fps=None):
     """Snap every animation to a grid of 1/fps: whole-beat durations and delays, and steps()
-    so values only change on the beat. Every element then changes at the same instants."""
+    so values only change on the beat. Every element then changes at the same instants.
+    With LOOP set instead, stretch each duration to LOOP / (whole number) and keep it smooth."""
+    fps = FPS if fps is None else fps
+
+    def loop(m):
+        dur = float(m.group(2))
+        dur = LOOP / max(1, round(LOOP / dur))
+        return m.group(0).replace(f" {m.group(2)}s", f" {dur:g}s", 1)
+
+    if LOOP:
+        return ANIM.sub(loop, svg)
+
     def fix(m):
         name, dur, delay = m.group(1), float(m.group(2)), float(m.group(3) or 0)
         n = max(1, round(dur * fps))
