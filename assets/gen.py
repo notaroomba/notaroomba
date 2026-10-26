@@ -308,9 +308,6 @@ def scene_blackhole(width, rows, y0):
         ".pt{transform-box:view-box;offset-rotate:0deg;offset-anchor:0 0;text-anchor:middle;dominant-baseline:central}",
         "@keyframes orb{from{offset-distance:0%}to{offset-distance:100%}}",
         # brightest on the approaching (left) side of each orbit: Doppler beaming
-        "@keyframes dop{0%,100%{opacity:.45}50%{opacity:1}}",
-        "@keyframes hal{0%,100%{opacity:.55}50%{opacity:1}}",
-        "@keyframes pul{0%,100%{opacity:.5}50%{opacity:.8}}.glow{animation:pul 6s ease-in-out infinite}",
     ]
 
     def ellipse(rx, ry):
@@ -318,13 +315,15 @@ def scene_blackhole(width, rows, y0):
         return (f"M{cx + rx:.1f} {cy:.1f}A{rx:.1f} {ry:.1f} 0 1 1 {cx - rx:.1f} {cy:.1f}"
                 f"A{rx:.1f} {ry:.1f} 0 1 1 {cx + rx:.1f} {cy:.1f}Z")
 
-    def particle(path, period, ch, color, size, anim2):
+    # kept deliberately light: one animation per particle and no duplicated layers,
+    # since every particle is a separately composited moving element
+    def particle(path, period, ch, color, size, opacity):
         d = -rnd.uniform(0, period)
-        return (f'<text class="pt b{color[1:]}" style="font-size:{size:.1f}px;offset-path:path(\'{path}\');'
-                f'animation:orb {period:.2f}s {d:.2f}s linear infinite,{anim2} {period:.2f}s {d:.2f}s linear infinite">{ch}</text>')
+        return (f'<text class="pt b{color[1:]}" style="font-size:{size:.1f}px;opacity:{opacity:.2f};offset-path:path(\'{path}\');'
+                f'animation:orb {period:.2f}s {d:.2f}s linear infinite">{ch}</text>')
 
     disk = []
-    n_disk = 340 if small else 680
+    n_disk = 120 if small else 240
     r_in, r_out = 1.6 * rs, (5.6 if small else 8.5) * rs
     for _ in range(n_disk):
         # more particles near the hot inner edge
@@ -334,25 +333,28 @@ def scene_blackhole(width, rows, y0):
         ramp = "@#%*+=-:." if heat > 0.5 else "*+=-:.."
         ch = ramp[min(len(ramp) - 1, int((1 - heat) * len(ramp) + rnd.uniform(-1, 1)) % len(ramp))]
         period = 5.5 * (r / r_in) ** 1.5
-        disk.append(particle(ellipse(r, r * tilt + rnd.uniform(-2.5, 2.5)), period, ch, HOT[idx], 9.5 + 3 * heat, "dop"))
+        disk.append(particle(ellipse(r, r * tilt + rnd.uniform(-2.5, 2.5)), period, ch, HOT[idx], 10 + 3 * heat, 0.55 + 0.45 * rnd.random()))
 
     halo = []
-    for _ in range(70 if small else 130):
+    for _ in range(28 if small else 50):
         r = rs * rnd.uniform(1.22, 1.5)
         idx = rnd.randint(5, len(HOT) - 1)
-        halo.append(particle(ellipse(r, r * rnd.uniform(0.92, 1.0)), rnd.uniform(7, 10), rnd.choice("*+.:o"), HOT[idx], 10, "hal"))
+        halo.append(particle(ellipse(r, r * rnd.uniform(0.92, 1.0)), rnd.uniform(7, 10), rnd.choice("*+.:o"), HOT[idx], 10, 0.7 + 0.3 * rnd.random()))
 
     glow = (f'<radialGradient id="bhg" gradientUnits="userSpaceOnUse" cx="{cx:g}" cy="{cy:g}" r="{r_out:g}" '
             f'gradientTransform="translate(0 {cy * (1 - 0.35):g}) scale(1 0.35)">'
             f'<stop offset="0" stop-color="#e87b14" stop-opacity=".45"/><stop offset=".35" stop-color="#8f3405" stop-opacity=".18"/>'
-            f'<stop offset="1" stop-color="#2b0d02" stop-opacity="0"/></radialGradient>'
-            f'<clipPath id="near"><rect x="0" y="{cy:g}" width="{width}" height="{rows * LINE_H:g}"/></clipPath>')
-    svg = (f'<ellipse class="glow" cx="{cx:g}" cy="{cy:g}" rx="{r_out:g}" ry="{r_out * 0.35:g}" fill="url(#bhg)"/>'
-           f'<g id="disk">{"".join(disk)}</g>'
-           f'<g>{"".join(halo)}</g>'
+            f'<stop offset="1" stop-color="#2b0d02" stop-opacity="0"/></radialGradient>')
+    # occlusion without drawing the disk twice: the shadow sits under the disk, so the near
+    # side (lower half) passes in front of it, and a black cap over the upper half hides the
+    # far side as it goes behind
+    cap = f"M{cx - rs:g} {cy:g}A{rs:g} {rs:g} 0 0 1 {cx + rs:g} {cy:g}Z"
+    svg = (f'<ellipse cx="{cx:g}" cy="{cy:g}" rx="{r_out:g}" ry="{r_out * 0.35:g}" fill="url(#bhg)" opacity=".7"/>'
            f'<circle cx="{cx:g}" cy="{cy:g}" r="{rs:g}" fill="{BG}"/>'
-           f'<circle cx="{cx:g}" cy="{cy:g}" r="{rs + 1.5:g}" fill="none" stroke="#fff5df" stroke-opacity=".55" stroke-width="1"/>'
-           f'<use href="#disk" clip-path="url(#near)"/>')
+           f'<g>{"".join(disk)}</g>'
+           f'<path d="{cap}" fill="{BG}"/>'
+           f'<g>{"".join(halo)}</g>'
+           f'<circle cx="{cx:g}" cy="{cy:g}" r="{rs + 1.5:g}" fill="none" stroke="#fff5df" stroke-opacity=".55" stroke-width="1"/>')
     return "".join(css), svg, glow
 
 
@@ -526,19 +528,20 @@ def about(cfg, terminal=True):
 def social_chip(key, handle, terminal=True, mobile=False):
     """One clickable social, a small card that sits under the about card. GitHub can't make
     parts of an image clickable, so each social is its own image wrapped in a link."""
-    fs = 22 if mobile else 20
-    w, h = (160, 56) if mobile else (230, 56)
+    fs = 22 if mobile else 19
+    w, h = (160, 56) if mobile else (230, 40)
     y = h / 2 + fs * 0.35
     parts = []
-    text = key
+    text = "website" if key == "site" else key
     isz = fs * 1.05  # brand icon, white like the text
     gap = fs * 0.5
     tw = isz + gap + measure(text, fs)
     x = (w - tw) / 2
-    parts.append(f'<g transform="translate({x:.1f} {h / 2 - isz / 2:.1f}) scale({isz / 24:.3f})"><path fill="{SMOKE}" d="{ICONS[key]}"/></g>')
+    parts.append(f'<g transform="translate({x:.1f} {h / 2 - isz / 2:.1f}) scale({isz / 24:.3f})">'
+                 f'{globe_icon(SMOKE) if key == "site" else f"<path fill=\'{SMOKE}\' d=\'{ICONS[key]}\'/>"}</g>')
     x += isz + gap
     handle_span = ""  # names only, so one image reads at desktop and phone widths
-    parts.append(f'<text x="{x:.1f}" y="{y:.1f}" style="font-size:{fs}px"><tspan fill="{SMOKE}">{key}</tspan>{handle_span}</text>')
+    parts.append(f'<text x="{x:.1f}" y="{y:.1f}" style="font-size:{fs}px"><tspan fill="{SMOKE}">{text}</tspan>{handle_span}</text>')
     return card(w, h, f'<g class="bp">{"".join(parts)}</g>', font=True, label=f"{key}: {handle}")
 
 
@@ -588,7 +591,7 @@ if __name__ == "__main__":
             write(f"header-{scene}{style}-athena.svg", header(DESKTOP, scene, term, "athena"))
             write(f"header-{scene}{style}-athena-mobile.svg", header(MOBILE, scene, term, "athena"))
     for key, _, handle, _ in SOCIALS:
-        if key in ("instagram", "linkedin", "youtube"):
+        if key in ("instagram", "linkedin", "youtube", "site"):
             for style, term in (("", True), ("-plain", False)):
                 write(f"social-{key}{style}.svg", social_chip(key, handle, term))
                 write(f"social-{key}{style}-mobile.svg", social_chip(key, handle, term, mobile=True))
