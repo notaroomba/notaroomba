@@ -46,6 +46,7 @@ PALETTES = {
 SMOKE = "#f2f4f3"
 BG = "#000000"
 EDGE = "#2d2a26"  # neutral card border
+FPS = 1  # every animation updates this many times a second, all on the same beats, so the image repaints rarely
 MONO = "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace"
 
 # Blender Pro Bold for all readable text; the ASCII scenes stay monospace so columns line up.
@@ -405,15 +406,30 @@ def subtitle(cfg, y, palette="classic"):
 
 
 # ---------------------------------------------------------------- cards
+ANIM = re.compile(r"animation:([\w-]+) ([\d.]+)s(?: (-?[\d.]+)s)? ([\w-]+(?:\([^)]*\))?) infinite")
+
+
+def quantize(svg, fps=FPS):
+    """Snap every animation to a grid of 1/fps: whole-beat durations and delays, and steps()
+    so values only change on the beat. Every element then changes at the same instants."""
+    def fix(m):
+        name, dur, delay = m.group(1), float(m.group(2)), float(m.group(3) or 0)
+        n = max(1, round(dur * fps))
+        out = f"animation:{name} {n / fps:g}s"
+        d = round(delay * fps) / fps
+        return out + (f" {d:g}s" if d else "") + f" steps({n}) infinite"
+    return ANIM.sub(fix, svg) if fps else svg
+
+
 def card(w, h, inner, css="", label="", defs="", border=EDGE, font=False):
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {w} {h}" width="{w}" height="{h}" role="img" aria-label="{esc(label)}">
+    return quantize(f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {w} {h}" width="{w}" height="{h}" role="img" aria-label="{esc(label)}">
 <style>{FONT_FACE if font else ""}text{{font-family:{MONO};font-size:12.5px;white-space:pre}}{color_classes()}{css}
 @keyframes blink{{0%,49%{{opacity:1}}50%,100%{{opacity:0}}}}.cur{{animation:blink 1.1s step-end infinite}}
 @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}</style>
 <defs><clipPath id="card"><rect width="{w}" height="{h}" rx="18"/></clipPath>{defs}</defs>
 <g clip-path="url(#card)"><rect width="{w}" height="{h}" fill="{BG}"/>{inner}</g>
 <rect x="0.75" y="0.75" width="{w - 1.5}" height="{h - 1.5}" rx="18" fill="none" stroke="{border}" stroke-width="1.5"/>
-</svg>'''
+</svg>''')
 
 
 def header(cfg, scene, terminal=True, palette="classic"):
@@ -529,7 +545,7 @@ def social_chip(key, handle, terminal=True, mobile=False):
     """One clickable social, a small card that sits under the about card. GitHub can't make
     parts of an image clickable, so each social is its own image wrapped in a link."""
     fs = 22 if mobile else 19
-    w, h = (160, 56) if mobile else (230, 40)
+    w, h = (160, 56) if mobile else (229, 48)
     y = h / 2 + fs * 0.35
     parts = []
     text = "website" if key == "site" else key
@@ -543,6 +559,19 @@ def social_chip(key, handle, terminal=True, mobile=False):
     handle_span = ""  # names only, so one image reads at desktop and phone widths
     parts.append(f'<text x="{x:.1f}" y="{y:.1f}" style="font-size:{fs}px"><tspan fill="{SMOKE}">{text}</tspan>{handle_span}</text>')
     return card(w, h, f'<g class="bp">{"".join(parts)}</g>', font=True, label=f"{key}: {handle}")
+
+
+def link_chip(key, handle, pos, n=4, gap=0.06):
+    """A chip for the README row: n images at 100/n % each, set with no whitespace between them.
+    Each image carries transparent margins so the chips share equal gaps (gap x image width)
+    and the outer two sit flush with the cards' edges."""
+    chip = re.sub(r' width="[^"]*" height="[^"]*"', "", social_chip(key, handle, terminal=False), count=1)
+    cw, h = 229, 48
+    W = cw / (1 - gap * (n - 1) / n)
+    g = gap * W
+    left = pos * (cw + g) - pos * W
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.2f} {h}" width="{W:.2f}" height="{h}" role="img" aria-label="{key}">'
+            f'<svg x="{left:.2f}" width="{cw}" height="{h}"{chip[4:]}')
 
 
 def globe_icon(color=BLUE[500]):
@@ -595,6 +624,8 @@ if __name__ == "__main__":
             for style, term in (("", True), ("-plain", False)):
                 write(f"social-{key}{style}.svg", social_chip(key, handle, term))
                 write(f"social-{key}{style}-mobile.svg", social_chip(key, handle, term, mobile=True))
+    for i, key in enumerate(("instagram", "linkedin", "youtube", "site")):
+        write(f"link-{key}.svg", link_chip(key, key, i) + "</svg>")
     write("about-plain.svg", about(DESKTOP, terminal=False))
     write("about-plain-mobile.svg", about(MOBILE, terminal=False))
     for key, _, handle, _ in SOCIALS:
