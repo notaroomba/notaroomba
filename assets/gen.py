@@ -46,7 +46,7 @@ PALETTES = {
 SMOKE = "#f2f4f3"
 BG = "#000000"
 EDGE = "#2d2a26"  # neutral card border
-FPS = 1  # every animation updates this many times a second, all on the same beats, so the image repaints rarely
+FPS = 24  # every animation updates this many times a second, all on the same beats, so the image repaints rarely
 MONO = "ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace"
 
 # Blender Pro Bold for all readable text; the ASCII scenes stay monospace so columns line up.
