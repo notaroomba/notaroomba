@@ -500,7 +500,7 @@ def footer(cfg, scene):
 
 
 ABOUT = [
-    [("mit '30", "#ff1423"), (" student, previously gap year @ ", None), ("hack club", "#ec3750"),
+    [("aero/astro and EE @ ", None), ("mit '30", "#ff1423"), (", previously gap year @ ", None), ("hack club", "#ec3750"),
      (", before that led ", None), ("icarus club", "#f1c40f"), (".", None)],
     [("im into full-stack development, embedded programming, and ", None), ("hardware design", BLUE[500]), (".", None)],
     [("i am an avid ", None), ("musician/composer", "#f1c40f"), (" and play piano, cello and drums.", None)],
