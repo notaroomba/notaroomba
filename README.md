@@ -3,10 +3,10 @@
 <picture><source media="(max-width: 600px)" srcset="./assets/about-plain-mobile.svg"><img src="./assets/about-plain.svg" width="100%" alt="mit '30 student, previously gap year @ hack club, before that led icarus club. im into full-stack development, embedded programming, and hardware design. i am an avid musician/composer and play piano, cello and drums. currently learning altium + solidworks. and here are my other socials:"></picture>
 
 <p align="center">
-  <a href="https://instagram.com/notaroomba"><img src="./assets/link-instagram.svg" width="23%" alt="instagram"></a>
-  <a href="https://linkedin.com/in/notaroomba"><img src="./assets/link-linkedin.svg" width="23%" alt="linkedin"></a>
-  <a href="https://youtube.com/@notaroomba"><img src="./assets/link-youtube.svg" width="23%" alt="youtube"></a>
-  <a href="https://notaroomba.dev"><img src="./assets/link-site.svg" width="23%" alt="website"></a>
+  <a href="https://instagram.com/notaroomba"><img src="./assets/link-instagram.svg" width="21%" alt="instagram"></a>&nbsp;&nbsp;
+  <a href="https://linkedin.com/in/notaroomba"><img src="./assets/link-linkedin.svg" width="21%" alt="linkedin"></a>&nbsp;&nbsp;
+  <a href="https://youtube.com/@notaroomba"><img src="./assets/link-youtube.svg" width="21%" alt="youtube"></a>&nbsp;&nbsp;
+  <a href="https://notaroomba.dev"><img src="./assets/link-site.svg" width="21%" alt="website"></a>
 </p>
 
 <p align="center">
