@@ -501,7 +501,7 @@ def footer(cfg, scene):
 
 ABOUT = [
     [("aero/astro and EE @ ", None), ("mit '30", "#ff1423"), (", previously gap year @ ", None), ("hack club", "#ec3750"),
-     (", before that led ", None), ("icarus club", "#f1c40f"), (".", None)],
+     (".", None)],
     [("im into full-stack development, embedded programming, and ", None), ("hardware design", BLUE[500]), (".", None)],
     [("i am an avid ", None), ("musician/composer", "#f1c40f"), (" and play piano, cello and drums.", None)],
     [("currently learning ", None), ("altium", BLUE[500]), (" + ", None), ("solidworks", BLUE[500]), (".", None)],
@@ -558,7 +558,7 @@ def about(cfg, terminal=True):
                 for t, c in runs
             )
             out.append(f'<text x="{x0}" y="{y:g}" style="font-size:{fs}px">{spans}</text>')
-    return card(w, H, f'<g class="bp">{"".join(out)}</g>', font=True, label="about me: mit '30 student, previously gap year @ hack club, before that led icarus club")
+    return card(w, H, f'<g class="bp">{"".join(out)}</g>', font=True, label="about me: aero/astro and EE @ mit '30, previously gap year @ hack club")
 
 
 def social_chip(key, handle, terminal=True, mobile=False):
