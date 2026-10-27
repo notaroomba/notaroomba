@@ -1,7 +1,7 @@
 """Pre-render the animated header and footer into looping animated AVIFs.
 
 Frames are free to play back, so these use every black hole particle and smooth motion.
-AV1 keeps them near-lossless at a fraction of a WebP's size, with transparent corners.
+AV1 keeps them lossless at well under a WebP's size, with transparent corners.
 Needs node with playwright (npm i playwright) and ffmpeg 6.1+ built with libaom.
     cd assets && python3 anim.py [frames-per-second] [loop-seconds] [scale] [crf]
 """
@@ -12,10 +12,10 @@ import tempfile
 
 import gen
 
-FPS = int(sys.argv[1]) if len(sys.argv) > 1 else 60
+FPS = int(sys.argv[1]) if len(sys.argv) > 1 else 24
 gen.LOOP = int(sys.argv[2]) if len(sys.argv) > 2 else 10
 SCALE = sys.argv[3] if len(sys.argv) > 3 else "1.5"  # pixels per SVG unit, above 1 for sharper text on retina screens
-CRF = sys.argv[4] if len(sys.argv) > 4 else "18"  # lower is closer to lossless
+CRF = sys.argv[4] if len(sys.argv) > 4 else "0"  # 0 is lossless; raise it for smaller files
 gen.DETAIL = True
 
 here = os.path.dirname(os.path.abspath(__file__))
